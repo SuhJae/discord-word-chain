@@ -2,6 +2,7 @@
 # No need to run it, since the CSV file is provided upon download.
 # It is only for updating the CSV file if the Excel files from the National Institute of the Korean Language
 # Standard Korean Dictionary are updated.
+# After, run cleanup.py to clean up the CSV file
 
 import pandas as pd
 df = pd.DataFrame()
