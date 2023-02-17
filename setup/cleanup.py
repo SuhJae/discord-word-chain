@@ -15,5 +15,8 @@ df['어휘'] = df['어휘'].str.replace('-', '').str.replace('^', '').str.replac
 # Remove duplicates from the "어휘" column
 df = df.drop_duplicates(subset=['어휘'])
 
+# remove <sub style='font-size:11px;'> and </sub> from the "뜻" column
+df['뜻풀이'] = df['뜻풀이'].str.replace(r'<sub style=\'font-size:11px;\'>', '').str.replace(r'</sub>', '')
+
 # Write the cleaned data to a new CSV file
 df.to_csv('polished-korean.csv', index=False)
