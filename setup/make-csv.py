@@ -1,12 +1,11 @@
-
-
+# This code extracts data from Excel files and saves it to a CSV file.
+# No need to run it, since the CSV file is provided upon download.
+# It is only for updating the CSV file if the Excel files from the National Institute of the Korean Language
+# Standard Korean Dictionary are updated.
 
 import pandas as pd
-
-# Create an empty DataFrame to store the extracted data
 df = pd.DataFrame()
 
-# Loop through the Excel files and extract the columns of interest
 for i in range(1, 16):
     filename = f'original/words-{i}.xls'
     data = pd.read_excel(filename, usecols=['어휘', '뜻풀이', '구성 단위'])
