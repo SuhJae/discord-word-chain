@@ -230,7 +230,8 @@ async def restart_game(interaction: Interaction):
                            color=nextcord.Color.blue())
     embed.add_field(name='**뜻풀이**', value=dictionary.get(word).decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('[', '`[').replace(']', ']`').strip())
     embed.set_footer(text=f"{interaction.user.display_name}님의 요청으로 게임이 재시작 되었습니다.")
-    await interaction.channel.send(embed=embed)
+    start = await interaction.channel.send(embed=embed)
+    r.set(f'used:{server_id}:{word}', start.id)
 
 
 client.run(config.get_value('CREDENTIAL', 'token'))
