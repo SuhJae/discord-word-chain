@@ -234,4 +234,16 @@ async def restart_game(interaction: Interaction):
     r.set(f'used:{server_id}:{word}', start.id)
 
 
+# when joining new server
+@client.event
+async def on_guild_join(guild):
+    logger.info(f'Joined {guild.name}({guild.id})')
+
+
+# when leaving server
+@client.event
+async def on_guild_remove(guild):
+    logger.info(f'Left {guild.name}({guild.id})')
+
+
 client.run(config.get_value('CREDENTIAL', 'token'))
