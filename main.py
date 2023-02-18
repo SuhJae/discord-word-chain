@@ -128,7 +128,8 @@ async def set_channel(
 
     r.set(f'word:{interaction.guild.id}', word)
 
-    embed = nextcord.Embed(title="끝말잇기 시작!", description=f'끝말잇기를 시작합니다! 첫 단어는 **`{word}`**입니다.', color=nextcord.Color.green())
+    embed = nextcord.Embed(title="끝말잇기 시작!", description=f'끝말잇기를 시작합니다! 첫 단어는 **`{word}`**입니다.', color=nextcord.Color.blue())
+    embed.add_field(name='**뜻풀이**', value=dictionary.get(word).decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('[', '`[').replace(']', ']`').strip())
     await interaction.channel.send(embed=embed)
 
 
@@ -160,10 +161,10 @@ async def on_message(message):
         return
 
     dubem = initial_letter(word[-1])
-    is_dubem = dubem == word[-1]
+    is_dubem = dubem != word[-1]
     is_valid_word = dictionary.get(next_word)
 
-    if not next_word.startswith(word[-1]) and (is_dubem and next_word.startswith(dubem)):
+    if not next_word.startswith(word[-1]) and not (is_dubem and next_word.startswith(dubem)):
         error = word[-1] if not is_dubem else f'{word[-1]}({dubem})'
         await send_error_message(message.channel, f'**{error}**로 시작하는 단어를 입력해 주세요.')
         await message.delete()
@@ -173,6 +174,18 @@ async def on_message(message):
         await send_error_message(message.channel, f'**{next_word}**는 사전에 등재되어 있지 않은 단어입니다.\n`/사전`을 이용하여 단어를 찾아보세요.')
         await message.delete()
         return
+
+    used_key = f"used:{message.guild.id}:{next_word}"
+    if r.exists(used_key):
+        used_message_id = r.get(used_key)
+        if used_message_id:
+            used_message = await message.channel.fetch_message(int(used_message_id))
+            await send_error_message(message.channel, f'**{next_word}**는 __[여기서]({used_message.jump_url})__ 이미 사용된 단어입니다.')
+        else:
+            await send_error_message(message.channel, f'**{next_word}**는 이미 사용된 단어입니다.')
+        await message.delete()
+        return
+    r.set(used_key, message.id)
 
     definition = is_valid_word.decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace(
         '[', '`[').replace(']', ']`').strip()
@@ -197,21 +210,27 @@ async def on_message(message):
 
 @client.slash_command(name='재시작', description='끝말잇기를 처음부터 다시 시작합니다.')
 async def restart_game(interaction: Interaction):
+    server_id = interaction.guild.id
     await interaction.response.send_message(f'끝말잇기를 초기화 합니다.', ephemeral=True)
 
-    r.delete(f'word:{interaction.guild.id}')
+    # clear used word keys
+    used_keys = r.keys(f'used:{server_id}:*')
+    for key in used_keys:
+        r.delete(key)
 
-    # select random word
+    # set new word
+    r.delete(f'word:{server_id}')
     while True:
         word = dictionary.randomkey().decode('utf-8')
         if len(f'*{dictionary.keys(word[-1])}') > 10:
             break
+    r.set(f'word:{server_id}', word)
 
-    r.set(f'word:{interaction.guild.id}', word)
-
-    embed = nextcord.Embed(title="끝말잇기 시작!", description=f'끝말잇기를 다시 시작합니다! 첫 단어는 **`{word}`**입니다.',
-                           color=nextcord.Color.green())
+    embed = nextcord.Embed(title="끝말잇기 시작!", description=f'끝말잇기를 다시 시작합니다! 첫 단어는 **{word}**입니다.',
+                           color=nextcord.Color.blue())
+    embed.add_field(name='**뜻풀이**', value=dictionary.get(word).decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('[', '`[').replace(']', ']`').strip())
     embed.set_footer(text=f"{interaction.user.display_name}님의 요청으로 게임이 재시작 되었습니다.")
     await interaction.channel.send(embed=embed)
+
 
 client.run(config.get_value('CREDENTIAL', 'token'))
