@@ -1,6 +1,6 @@
 import nextcord
 import redis
-import random
+import hgtk
 from nextcord import Interaction, SlashOption
 from nextcord.ext import commands
 from utility import Logger, ConfigReader
@@ -19,6 +19,29 @@ intents.members = True
 intents.message_content = True
 
 client = commands.Bot(intents=intents)
+
+
+# This function checks for the "두음 법칙" (dubeom beopchik) rule in Korean language, which states that when the initial
+# sound of a syllable is either 'ㄴ' or 'ㄹ', and the vowel of the second sound is one of ㅣ, ㅑ, ㅕ, ㅛ, ㅠ, ㅖ, or ㅒ, the
+# initial sound of the syllable changes to ㅇ. This function takes a Korean letter as input and decomposes it into its
+# constituent parts, checks whether the dubeom beopchik rule applies, and returns the modified initial sound if
+# applicable. The three parts of the syllable (initial, vowel, and final sounds) are represented using the "Hangul
+# Compatibility Jamo" Unicode characters, and are composed back into a complete syllable using the
+# hgtk.letter.compose() function.
+def initial_letter(letter):
+    sdis = hgtk.letter.decompose(letter)
+    if len(sdis) > 1:
+        if sdis[0] in ['ㄴ', 'ㄹ'] and sdis[1] in ['ㅣ', 'ㅑ', 'ㅕ', 'ㅛ', 'ㅠ', 'ㅖ', 'ㅒ']:
+            sdis_list = list(sdis)
+            sdis_list[0] = 'ㅇ'
+            sdis = tuple(sdis_list)
+        elif sdis[0] == 'ㄹ' and sdis[1] in ['ㅏ', 'ㅗ', 'ㅜ', 'ㅡ']:
+            sdis_list = list(sdis)
+            sdis_list[0] = 'ㄴ'
+            sdis = tuple(sdis_list)
+    else:
+        sdis += ('', '')  # add missing parts
+    return hgtk.letter.compose(*sdis)
 
 
 @client.event
@@ -94,16 +117,22 @@ async def set_channel(
 
     logger.log(f'{interaction.user.name} used /설정 command on {interaction.guild.name} server.')
     r.set(f'channel:{interaction.guild.id}', interaction.channel.id)
+
+    r.delete(f'word:{interaction.guild.id}')
+
     # select random word
-    words = dictionary.keys(f'*기')
-    words = [i.decode('utf-8') for i in words]
-    word = random.choice(words)
+    while True:
+        word = dictionary.randomkey().decode('utf-8')
+        if len(f'*{dictionary.keys(word[-1])}') > 10:
+            break
 
     r.set(f'word:{interaction.guild.id}', word)
 
     embed = nextcord.Embed(title="끝말잇기 시작!", description=f'끝말잇기를 시작합니다! 첫 단어는 **`{word}`**입니다.', color=nextcord.Color.green())
     await interaction.channel.send(embed=embed)
 
+
+print(initial_letter('룰'))
 
 @client.event
 async def on_message(message):
@@ -117,6 +146,7 @@ async def on_message(message):
 
         if len(message.content) < 2:
             embed = nextcord.Embed(title="끝말잇기 오류", description=f'2글자 이상의 단어를 사용해 주세요.', color=nextcord.Color.red())
+            embed.set_footer(text='게임 초기화를 원하시면 /재시작 명령어를 사용해 주세요.')
             await message.channel.send(embed=embed, delete_after=5)
             await message.delete()
             return
@@ -132,12 +162,32 @@ async def on_message(message):
                 await message.reply(embed=embed, mention_author=False)
             else:
                 embed = nextcord.Embed(title="끝말잇기 오류!", description=f'**`{next_word}`**는 사전에 등재되어 있지 않은 단어입니다.\n`/사전`을 이용하여 단어를 찾아보세요.', color=nextcord.Color.red())
+                embed.set_footer(text='게임 초기화를 원하시면 /재시작 명령어를 사용해 주세요.')
                 await message.channel.send(embed=embed, delete_after=5)
                 await message.delete()
         else:
             embed = nextcord.Embed(title="끝말잇기 오류!", description=f'**`{word[-1]}`**로 시작하는 단어를 입력해 주세요.', color=nextcord.Color.red())
+            embed.set_footer(text='게임 초기화를 원하시면 /재시작 명령어를 사용해 주세요.')
             await message.channel.send(embed=embed, delete_after=5)
             await message.delete()
 
+@client.slash_command(name='재시작', description='끝말잇기를 처음부터 다시 시작합니다.')
+async def restart_game(interaction: Interaction):
+    await interaction.response.send_message(f'끝말잇기를 초기화 합니다.', ephemeral=True)
+
+    r.delete(f'word:{interaction.guild.id}')
+
+    # select random word
+    while True:
+        word = dictionary.randomkey().decode('utf-8')
+        if len(f'*{dictionary.keys(word[-1])}') > 10:
+            break
+
+    r.set(f'word:{interaction.guild.id}', word)
+
+    embed = nextcord.Embed(title="끝말잇기 시작!", description=f'끝말잇기를 다시 시작합니다! 첫 단어는 **`{word}`**입니다.',
+                           color=nextcord.Color.green())
+    embed.set_footer(text=f"{interaction.user.display_name}님의 요청으로 재시작 되었습니다.")
+    await interaction.channel.send(embed=embed)
 
 client.run(config.get_value('CREDENTIAL', 'token'))
