@@ -210,6 +210,7 @@ async def on_message(message):
 
 @client.slash_command(name='재시작', description='끝말잇기를 처음부터 다시 시작합니다.')
 async def restart_game(interaction: Interaction):
+    logger.log(f'{interaction.user.name} used /재시작 command on {interaction.guild.name} server.')
     server_id = interaction.guild.id
     await interaction.response.send_message(f'끝말잇기를 초기화 합니다.', ephemeral=True)
 
