@@ -135,7 +135,7 @@ async def set_channel(
 
 async def send_error_message(channel, error_description):
     embed = nextcord.Embed(
-        title="끝말잇기 오류",
+        title="유효하지 않은 단어",
         description=error_description,
         color=nextcord.Color.red()
     )
@@ -237,13 +237,13 @@ async def restart_game(interaction: Interaction):
 # when joining new server
 @client.event
 async def on_guild_join(guild):
-    logger.info(f'Joined {guild.name}({guild.id})')
+    logger.log(f'Joined {guild.name}({guild.id})')
 
 
 # when leaving server
 @client.event
 async def on_guild_remove(guild):
-    logger.info(f'Left {guild.name}({guild.id})')
+    logger.log(f'Left {guild.name}({guild.id})')
 
 
 client.run(config.get_value('CREDENTIAL', 'token'))
