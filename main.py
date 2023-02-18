@@ -148,7 +148,7 @@ async def on_message(message):
     if message.author.bot or not r.get(f'channel:{message.guild.id}'):
         return
 
-    if message.startswith('> '):
+    if message.content.startswith('> '):
         return
 
     channel_id = int(r.get(f'channel:{message.guild.id}'))
