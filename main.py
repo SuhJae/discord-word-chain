@@ -132,87 +132,67 @@ async def set_channel(
     await interaction.channel.send(embed=embed)
 
 
+async def send_error_message(channel, error_description):
+    embed = nextcord.Embed(
+        title="끝말잇기 오류",
+        description=error_description,
+        color=nextcord.Color.red()
+    )
+    embed.set_footer(text='게임 초기화를 원하시면 /재시작 명령어를 사용해 주세요.')
+    await channel.send(embed=embed, delete_after=5)
+
+
 @client.event
 async def on_message(message):
-    if message.author.bot:
+    if message.author.bot or not r.get(f'channel:{message.guild.id}'):
         return
-    if not r.get(f'channel:{message.guild.id}'):
+
+    channel_id = int(r.get(f'channel:{message.guild.id}'))
+    if message.channel.id != channel_id:
         return
-    if message.channel.id == int(r.get(f'channel:{message.guild.id}')):
-        word = r.get(f'word:{message.guild.id}').decode('utf-8')
-        next_word = message.content
 
-        if len(message.content) < 2:
-            embed = nextcord.Embed(title="끝말잇기 오류", description=f'2글자 이상의 단어를 사용해 주세요.', color=nextcord.Color.red())
-            embed.set_footer(text='게임 초기화를 원하시면 /재시작 명령어를 사용해 주세요.')
-            await message.channel.send(embed=embed, delete_after=5)
-            await message.delete()
-            return
+    word = r.get(f'word:{message.guild.id}').decode('utf-8')
+    next_word = message.content
 
-        # check for the dubeom beopchik rule
-        dubem = initial_letter(word[-1])
-        if dubem == word[-1]:
-            if next_word.startswith(word[-1]):
-                if dictionary.get(next_word):
-                    definition = dictionary.get(next_word)
-                    description = definition.decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」',
-                                                                                                             '」`').replace(
-                        '[', '`[').replace(']', ']`').strip()
-                    r.set(f'word:{message.guild.id}', next_word)
+    if len(next_word) < 2:
+        await send_error_message(message.channel, '2글자 이상의 단어를 사용해 주세요.')
+        await message.delete()
+        return
 
-                    n_bubem = initial_letter(next_word[-1])
-                    if n_bubem == next_word[-1]:
-                        embed = nextcord.Embed(title="", description=f'{description}', color=nextcord.Color.green())
-                        embed.set_author(name=f"{word} → {next_word}", icon_url=message.author.avatar.url)
-                        await message.reply(embed=embed, mention_author=False)
-                    else:
-                        embed = nextcord.Embed(title="", description=f'{description}', color=nextcord.Color.green())
-                        embed.set_author(name=f"{word} → {next_word}({n_bubem})", icon_url=message.author.avatar.url)
-                        await message.reply(embed=embed, mention_author=False)
-                else:
-                    embed = nextcord.Embed(title="끝말잇기 오류!",
-                                           description=f'**`{next_word}`**는 사전에 등재되어 있지 않은 단어입니다.\n`/사전`을 이용하여 단어를 찾아보세요.',
-                                           color=nextcord.Color.red())
-                    embed.set_footer(text='게임 초기화를 원하시면 /재시작 명령어를 사용해 주세요.')
-                    await message.channel.send(embed=embed, delete_after=5)
-                    await message.delete()
-            else:
-                embed = nextcord.Embed(title="끝말잇기 오류!", description=f'**`{word[-1]}`**로 시작하는 단어를 입력해 주세요.',
-                                       color=nextcord.Color.red())
-                embed.set_footer(text='게임 초기화를 원하시면 /재시작 명령어를 사용해 주세요.')
-                await message.channel.send(embed=embed, delete_after=5)
-                await message.delete()
-        else:
-            if next_word.startswith(word[-1]) or next_word.startswith(dubem):
-                if dictionary.get(next_word):
-                    definition = dictionary.get(next_word)
-                    description = definition.decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」',
-                                                                                                             '」`').replace(
-                        '[', '`[').replace(']', ']`').strip()
-                    r.set(f'word:{message.guild.id}', next_word)
+    dubem = initial_letter(word[-1])
+    is_dubem = dubem == word[-1]
+    is_valid_word = dictionary.get(next_word)
 
-                    n_bubem = initial_letter(next_word[-1])
-                    if n_bubem == next_word[-1]:
-                        embed = nextcord.Embed(title="", description=f'{description}', color=nextcord.Color.green())
-                        embed.set_author(name=f"{word}({dubem}) → {next_word}", icon_url=message.author.avatar.url)
-                        await message.reply(embed=embed, mention_author=False)
-                    else:
-                        embed = nextcord.Embed(title="", description=f'{description}', color=nextcord.Color.green())
-                        embed.set_author(name=f"{word}({dubem}) → {next_word}({n_bubem})", icon_url=message.author.avatar.url)
-                        await message.reply(embed=embed, mention_author=False)
-                else:
-                    embed = nextcord.Embed(title="끝말잇기 오류!",
-                                           description=f'**`{next_word}`**는 사전에 등재되어 있지 않은 단어입니다.\n`/사전`을 이용하여 단어를 찾아보세요.',
-                                           color=nextcord.Color.red())
-                    embed.set_footer(text='게임 초기화를 원하시면 /재시작 명령어를 사용해 주세요.')
-                    await message.channel.send(embed=embed, delete_after=5)
-                    await message.delete()
-            else:
-                embed = nextcord.Embed(title="끝말잇기 오류!", description=f'**`{word[-1]}({dubem})`**로 시작하는 단어를 입력해 주세요.',
-                                       color=nextcord.Color.red())
-                embed.set_footer(text='게임 초기화를 원하시면 /재시작 명령어를 사용해 주세요.')
-                await message.channel.send(embed=embed, delete_after=5)
-                await message.delete()
+    if not next_word.startswith(word[-1]) and (is_dubem and next_word.startswith(dubem)):
+        error = word[-1] if not is_dubem else f'{word[-1]}({dubem})'
+        await send_error_message(message.channel, f'**{error}**로 시작하는 단어를 입력해 주세요.')
+        await message.delete()
+        return
+
+    if not is_valid_word:
+        await send_error_message(message.channel, f'**{next_word}**는 사전에 등재되어 있지 않은 단어입니다.\n`/사전`을 이용하여 단어를 찾아보세요.')
+        await message.delete()
+        return
+
+    definition = is_valid_word.decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace(
+        '[', '`[').replace(']', ']`').strip()
+    r.set(f'word:{message.guild.id}', next_word)
+
+    if is_dubem:
+        name = f"{word} → {next_word}"
+    else:
+        name = f"{word}({dubem}) → {next_word}"
+    n_bubem = initial_letter(next_word[-1])
+    if n_bubem != next_word[-1]:
+        name += f'({n_bubem})'
+
+    embed = nextcord.Embed(
+        title="",
+        description=f'{definition}',
+        color=nextcord.Color.green()
+    )
+    embed.set_author(name=name, icon_url=message.author.avatar.url)
+    await message.reply(embed=embed, mention_author=False)
 
 
 @client.slash_command(name='재시작', description='끝말잇기를 처음부터 다시 시작합니다.')
@@ -231,7 +211,7 @@ async def restart_game(interaction: Interaction):
 
     embed = nextcord.Embed(title="끝말잇기 시작!", description=f'끝말잇기를 다시 시작합니다! 첫 단어는 **`{word}`**입니다.',
                            color=nextcord.Color.green())
-    embed.set_footer(text=f"{interaction.user.display_name}님의 요청으로 재시작 되었습니다.")
+    embed.set_footer(text=f"{interaction.user.display_name}님의 요청으로 게임이 재시작 되었습니다.")
     await interaction.channel.send(embed=embed)
 
 client.run(config.get_value('CREDENTIAL', 'token'))
