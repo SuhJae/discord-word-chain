@@ -71,6 +71,8 @@ async def search_words(
 
     if definition.decode('utf-8').startswith('「어인정」'):
         url = ('https://kkukowiki.kr/w/'+word).replace(' ', '%20')
+    elif definition.decode('utf-8').startswith('「역사 용어」'):
+        url = ('https://db.history.go.kr/search/searchResult.do?sort=levelId&dir=ASC&start=-1&limit=20&page=1&pre_page=1&itemIds=&codeIds=&synonym=off&chinessChar=on&searchTermImages='+ word +'&searchKeywordType=BI&searchKeywordMethod=EQ&searchKeyword=가&searchKeywordConjunction=AND').replace(' ', '%20')
     else:
         url = ('https://stdict.korean.go.kr/search/searchResult.do?pageSize=10&searchKeyword='+word).replace(' ', '%20')
     description = definition.decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('``', '` `').replace('[', '`[').replace(']', ']`').strip()
