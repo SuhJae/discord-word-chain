@@ -78,7 +78,7 @@ async def search_words(
                            color=nextcord.Color.green())
     embed.set_author(name=f"단어 검색 - {word}", icon_url=client.user.avatar.url)
 
-    await interaction.response.send_message(embed=embed ,ephemeral=ephemeral)
+    await interaction.response.send_message(embed=embed, ephemeral=ephemeral)
 
 
 @search_words.on_autocomplete("word")
@@ -210,7 +210,10 @@ async def on_message(message):
         description=f'{definition}',
         color=nextcord.Color.green()
     )
-    embed.set_author(name=name, icon_url=message.author.avatar.url)
+    if message.author.avatar.url != None:
+        embed.set_author(name=name, icon_url=message.author.avatar.url)
+    else:
+        embed.set_author(name=name, icon_url=client.author.avatar.url)
     await message.reply(embed=embed, mention_author=False)
 
 
