@@ -80,6 +80,7 @@ async def search_words(
 
     await interaction.response.send_message(embed=embed ,ephemeral=ephemeral)
 
+
 @search_words.on_autocomplete("word")
 async def preview(interaction: Interaction, word: str):
     if not word:
@@ -98,6 +99,7 @@ async def preview(interaction: Interaction, word: str):
         matches = matches[:25]
         matches = [match.decode('utf-8') for match in matches]
         await interaction.response.send_autocomplete(matches)
+
 
 @client.slash_command(name='설정', description='현재 명령어를 사용한 채널을 끝말잇기 채널로 설정합니다.', default_member_permissions=8)
 async def set_channel(
@@ -194,13 +196,14 @@ async def on_message(message):
         '[', '`[').replace(']', ']`').strip()
     r.set(f'word:{message.guild.id}', next_word)
 
-    if is_dubem:
+    if not is_dubem:
         name = f"{word} → {next_word}"
     else:
         name = f"{word}({dubem}) → {next_word}"
     n_bubem = initial_letter(next_word[-1])
     if n_bubem != next_word[-1]:
         name += f'({n_bubem})'
+
 
     embed = nextcord.Embed(
         title="",

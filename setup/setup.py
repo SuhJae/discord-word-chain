@@ -27,6 +27,7 @@ def upload_words(words, meanings):
             pipeline.set(word, meaning)
     pipeline.execute()
 
+
 print('Uploading words...')
 
 # Read the words from the CSV file
