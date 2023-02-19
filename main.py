@@ -283,14 +283,20 @@ async def get_combo(interaction: Interaction):
     logger.log(f'{interaction.user.name} used /콤보 command on {interaction.guild.name} server.')
     server_id = interaction.guild.id
     used_keys = r.keys(f'used:{server_id}:*')
+
     combo = len(used_keys)
     embed = nextcord.Embed(title="서버 콤보", description=f'서버의 현재 끝말잇기 콤보는 **{combo}**입니다.',
                            color=nextcord.Color.blue())
 
-    if interaction.channel.id == int(r.get(f'channel:{server_id}')):
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+    channel = r.get(f'channel:{server_id}')
+    if channel == None:
+        await interaction.response.send_message('아직 서버에 채널이 설정되지 않았습니다.', ephemeral=True)
     else:
-        await interaction.response.send_message(embed=embed)
+        channel = int(channel)
+        if interaction.channel.id == channel:
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        else:
+            await interaction.response.send_message(embed=embed)
 
 
 # when joining new server
