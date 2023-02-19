@@ -69,7 +69,7 @@ async def search_words(
         await interaction.response.send_message(f'"**{word}**" 단어를 찾을 수 없었습니다. 철자를 다시 확인해 주세요. ', ephemeral=True)
         return
 
-    if definition.startswith('「어인정」'):
+    if definition.decode('utf-8').startswith('「어인정」'):
         url = ('https://kkukowiki.kr/w/'+word).replace(' ', '%20')
     else:
         url = ('https://stdict.korean.go.kr/search/searchResult.do?pageSize=10&searchKeyword='+word).replace(' ', '%20')
