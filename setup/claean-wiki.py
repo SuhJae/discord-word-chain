@@ -1,10 +1,10 @@
 import csv
 
 # Open the CSV file
-with open('filename.csv', newline='') as csvfile:
+with open('wiki-import.csv', newline='') as csvfile:
     reader = csv.reader(csvfile)
 
-    # Create a list to hold the filtered data
+    # Create a list to hold the filtered and modified data
     data = []
 
     # Loop through each row in the CSV file
@@ -14,10 +14,11 @@ with open('filename.csv', newline='') as csvfile:
             # Remove the whole row
             continue
 
-        # Otherwise, add the row to the filtered data
+        # Otherwise, modify the row and add it to the filtered data
+        row.append(" 「어인정」 비디오 게임")
         data.append(row)
 
-# Write the filtered data to a new CSV file
-with open('polished-wiki.csv', 'w', newline='') as csvfile:
+# Write the filtered and modified data to a new CSV file
+with open('polished wiki.csv', 'w', newline='') as csvfile:
     writer = csv.writer(csvfile)
     writer.writerows(data)

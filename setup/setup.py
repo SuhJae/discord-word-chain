@@ -30,13 +30,13 @@ def upload_words(words, meanings):
 
 print('Uploading words...')
 
-with open('minecraft.csv', newline='', encoding='utf-8') as csvfile:
+with open('agree.csv', newline='', encoding='utf-8') as csvfile:
     reader = csv.reader(csvfile)
     words = []
     definitions = []
     for row in reader:
         words.append(row[0])
-        definitions.append('「어인정」 마인크래프트')
+        definitions.append(row[1])
         # Upload the words in batches of 1000
         if len(words) == 1000:
             with ThreadPoolExecutor() as executor:
