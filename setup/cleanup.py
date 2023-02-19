@@ -9,9 +9,6 @@ import pandas as pd
 # Read in the input CSV file
 df = pd.read_csv('words.csv')
 
-# Clean up the first column
-df['어휘'] = df['어휘'].str.replace('-', '').str.replace('^', '').str.replace(r'\([^)]*\)', '').str.strip()
-
 # Remove duplicates from the "어휘" column
 df = df.drop_duplicates(subset=['어휘'])
 

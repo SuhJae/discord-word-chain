@@ -69,7 +69,10 @@ async def search_words(
         await interaction.response.send_message(f'"**{word}**" 단어를 찾을 수 없었습니다. 철자를 다시 확인해 주세요. ', ephemeral=True)
         return
 
-    url = ('https://stdict.korean.go.kr/search/searchResult.do?pageSize=10&searchKeyword='+word).replace(' ', '%20')
+    if definition.startswith('「어인정」'):
+        url = ('https://kkukowiki.kr/w/'+word).replace(' ', '%20')
+    else:
+        url = ('https://stdict.korean.go.kr/search/searchResult.do?pageSize=10&searchKeyword='+word).replace(' ', '%20')
     description = definition.decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('``', '` `').replace('[', '`[').replace(']', ']`').strip()
 
     # sends the autocompleted result
@@ -228,10 +231,10 @@ async def on_message(message):
 
     unused_keys = [key for key, result in zip(keys, results) if not result]
 
-    if len(keys) == 0:
+    if len(unused_keys) == 0:
         await game_over(message, next_word)
         return
-    elif len(keys) == 1 and len(keys[0]) == 1:
+    elif len(unused_keys) == 1 and len(keys[0]) == 1:
         await game_over(message, next_word)
         return
 
