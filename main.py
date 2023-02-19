@@ -248,7 +248,6 @@ async def game_over(message, next_word):
     embed.set_footer(text=f'콤보: {combo}단어')
     await message.channel.send(embed=embed)
     r.delete(f'word:{message.guild.id}')
-    r.delete(f'channel:{message.guild.id}')
 
 
 @client.slash_command(name='재시작', description='끝말잇기를 처음부터 다시 시작합니다.')
