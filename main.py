@@ -162,7 +162,11 @@ async def on_message(message):
     if message.channel.id != channel_id:
         return
 
-    word = r.get(f'word:{message.guild.id}').decode('utf-8')
+    word = r.get(f'word:{message.guild.id}')
+    if word is None:
+        return
+    word = word.decode('utf-8')
+
     next_word = message.content
 
     if len(next_word) < 2:
