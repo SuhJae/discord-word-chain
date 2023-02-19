@@ -228,8 +228,6 @@ async def on_message(message):
 
     unused_keys = [key for key, result in zip(keys, results) if not result]
 
-    print(unused_keys)
-
     if len(keys) == 0:
         await game_over(message, next_word)
         return
