@@ -70,7 +70,7 @@ async def search_words(
         return
 
     url = ('https://stdict.korean.go.kr/search/searchResult.do?pageSize=10&searchKeyword='+word).replace(' ', '%20')
-    description = definition.decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('[', '`[').replace(']', ']`').strip()
+    description = definition.decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('``', '` `').replace('[', '`[').replace(']', ']`').strip()
 
     # sends the autocompleted result
     embed = nextcord.Embed(title="",
@@ -131,7 +131,7 @@ async def set_channel(
     r.set(f'word:{interaction.guild.id}', word)
 
     embed = nextcord.Embed(title="끝말잇기 시작!", description=f'끝말잇기를 시작합니다! 첫 단어는 **`{word}`**입니다.', color=nextcord.Color.blue())
-    embed.add_field(name='**뜻풀이**', value=dictionary.get(word).decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('[', '`[').replace(']', ']`').strip())
+    embed.add_field(name='**뜻풀이**', value=dictionary.get(word).decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('``', '` `').replace('[', '`[').replace(']', ']`').strip())
     await interaction.channel.send(embed=embed)
 
 
@@ -192,7 +192,7 @@ async def on_message(message):
         return
     r.set(used_key, message.id)
 
-    definition = is_valid_word.decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace(
+    definition = is_valid_word.decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('``', '` `').replace(
         '[', '`[').replace(']', ']`').strip()
     r.set(f'word:{message.guild.id}', next_word)
 
@@ -210,11 +210,45 @@ async def on_message(message):
         description=f'{definition}',
         color=nextcord.Color.green()
     )
+
     if message.author.avatar.url != None:
         embed.set_author(name=name, icon_url=message.author.avatar.url)
     else:
         embed.set_author(name=name, icon_url=client.author.avatar.url)
     await message.reply(embed=embed, mention_author=False)
+
+    # check for game over
+    keys = dictionary.keys(f'{next_word[-1]}*')
+    keys = [key.decode('utf-8') for key in keys]
+
+    with r.pipeline() as pipe:
+        for key in keys:
+            pipe.exists(f'used:{message.guild.id}:{key}')
+        results = pipe.execute()
+
+    unused_keys = [key for key, result in zip(keys, results) if not result]
+
+    print(unused_keys)
+
+    if len(keys) == 0:
+        await game_over(message, next_word)
+        return
+    elif len(keys) == 1 and len(keys[0]) == 1:
+        await game_over(message, next_word)
+        return
+
+
+async def game_over(message, next_word):
+    embed = nextcord.Embed(
+        title="게임오버!",
+        description=f'{message.author.display_name}님이 사용하신 **{next_word}**에 이을 단어가 더 없습니다!\n게임을 다시 시작하려면 `/재시작`을 입력해 주세요.',
+        color=nextcord.Color.red()
+    )
+    combo = len(r.keys(f'used:{message.guild.id}:*'))
+    embed.set_footer(text=f'콤보: {combo}단어')
+    await message.channel.send(embed=embed)
+    r.delete(f'word:{message.guild.id}')
+    r.delete(f'channel:{message.guild.id}')
 
 
 @client.slash_command(name='재시작', description='끝말잇기를 처음부터 다시 시작합니다.')
@@ -238,7 +272,7 @@ async def restart_game(interaction: Interaction):
 
     embed = nextcord.Embed(title="끝말잇기 시작!", description=f'끝말잇기를 다시 시작합니다! 첫 단어는 **{word}**입니다.',
                            color=nextcord.Color.blue())
-    embed.add_field(name='**뜻풀이**', value=dictionary.get(word).decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('[', '`[').replace(']', ']`').strip())
+    embed.add_field(name='**뜻풀이**', value=dictionary.get(word).decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('``', '` `').replace('[', '`[').replace(']', ']`').strip())
     embed.set_footer(text=f"{interaction.user.display_name}님의 요청으로 게임이 재시작 되었습니다.")
     start = await interaction.channel.send(embed=embed)
     r.set(f'used:{server_id}:{word}', start.id)
@@ -250,7 +284,7 @@ async def get_combo(interaction: Interaction):
     server_id = interaction.guild.id
     used_keys = r.keys(f'used:{server_id}:*')
     combo = len(used_keys)
-    embed = nextcord.Embed(title="서버 콤보", description=f'서버의 현재 콤보는 **{combo}**입니다.',
+    embed = nextcord.Embed(title="서버 콤보", description=f'서버의 현재 끝말잇기 콤보는 **{combo}**입니다.',
                            color=nextcord.Color.blue())
 
     if interaction.channel.id == int(r.get(f'channel:{server_id}')):
