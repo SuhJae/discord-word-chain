@@ -244,6 +244,21 @@ async def restart_game(interaction: Interaction):
     r.set(f'used:{server_id}:{word}', start.id)
 
 
+@client.slash_command(name='콤보', description='서버의 현재 콤보를 확인합니다.')
+async def get_combo(interaction: Interaction):
+    logger.log(f'{interaction.user.name} used /콤보 command on {interaction.guild.name} server.')
+    server_id = interaction.guild.id
+    used_keys = r.keys(f'used:{server_id}:*')
+    combo = len(used_keys)
+    embed = nextcord.Embed(title="서버 콤보", description=f'서버의 현재 콤보는 **{combo}**입니다.',
+                           color=nextcord.Color.blue())
+
+    if interaction.channel.id == int(r.get(f'channel:{server_id}')):
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+    else:
+        await interaction.response.send_message(embed=embed)
+
+
 # when joining new server
 @client.event
 async def on_guild_join(guild):
