@@ -220,7 +220,7 @@ async def on_message(message):
         color=nextcord.Color.green()
     )
 
-    if message.author.avatar.url != None:
+    if message.author.avatar != None:
         embed.set_author(name=name, icon_url=message.author.avatar.url)
     else:
         embed.set_author(name=name, icon_url=client.author.avatar.url)
