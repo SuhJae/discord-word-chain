@@ -223,7 +223,7 @@ async def on_message(message):
     if message.author.avatar != None:
         embed.set_author(name=name, icon_url=message.author.avatar.url)
     else:
-        embed.set_author(name=name, icon_url=client.author.avatar.url)
+        embed.set_author(name=name, icon_url=client.avatar.url)
     await message.reply(embed=embed, mention_author=False)
 
     # check for game over
