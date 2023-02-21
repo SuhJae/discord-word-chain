@@ -48,6 +48,24 @@ with open('agree.csv', newline='', encoding='utf-8') as csvfile:
         with ThreadPoolExecutor() as executor:
             executor.submit(upload_words, words, definitions)
 
+with open('historic.csv', newline='', encoding='utf-8') as csvfile:
+    reader = csv.reader(csvfile)
+    words = []
+    definitions = []
+    for row in reader:
+        words.append(row[0])
+        definitions.append(row[1])
+        # Upload the words in batches of 1000
+        if len(words) == 1000:
+            with ThreadPoolExecutor() as executor:
+                executor.submit(upload_words, words, definitions)
+            words = []
+            definitions = []
+    # Upload any remaining words
+    if words:
+        with ThreadPoolExecutor() as executor:
+            executor.submit(upload_words, words, definitions)
+
 # Read the words from the CSV file
 with open('polished-korean.csv', newline='', encoding='utf-8') as csvfile:
     reader = csv.reader(csvfile)
@@ -67,22 +85,5 @@ with open('polished-korean.csv', newline='', encoding='utf-8') as csvfile:
         with ThreadPoolExecutor() as executor:
             executor.submit(upload_words, words, definitions)
 
-with open('historic.csv', newline='', encoding='utf-8') as csvfile:
-    reader = csv.reader(csvfile)
-    words = []
-    definitions = []
-    for row in reader:
-        words.append(row[0])
-        definitions.append(row[1])
-        # Upload the words in batches of 1000
-        if len(words) == 1000:
-            with ThreadPoolExecutor() as executor:
-                executor.submit(upload_words, words, definitions)
-            words = []
-            definitions = []
-    # Upload any remaining words
-    if words:
-        with ThreadPoolExecutor() as executor:
-            executor.submit(upload_words, words, definitions)
 
 print('Done')
