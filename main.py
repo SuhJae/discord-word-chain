@@ -1,6 +1,7 @@
 import nextcord
 import redis
 import hgtk
+from hgtk.exception import NotHangulException
 from nextcord import Interaction, SlashOption
 from nextcord.ext import commands
 from utility import Logger, ConfigReader
@@ -41,7 +42,10 @@ def initial_letter(letter):
             sdis = tuple(sdis_list)
     else:
         sdis += ('', '')  # add missing parts
-    return hgtk.letter.compose(*sdis)
+    try:
+        return hgtk.letter.compose(*sdis)
+    except NotHangulException:
+        return letter.lower()
 
 
 @client.event
