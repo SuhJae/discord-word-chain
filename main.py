@@ -291,7 +291,9 @@ async def game_over(message, next_word):
 async def restart_game(interaction: Interaction):
     logger.log(f'{interaction.user.name} used /재시작 command on {interaction.guild.name} server.')
     server_id = interaction.guild.id
-    await interaction.response.send_message(f'끝말잇기를 초기화 합니다.', ephemeral=True)
+
+    # thinking
+    await interaction.response.defer(ephemeral=False, with_message=True)
 
     # clear used word keys
     used_keys = r.keys(f'used:{server_id}:*')
@@ -310,7 +312,7 @@ async def restart_game(interaction: Interaction):
                            color=nextcord.Color.blue())
     embed.add_field(name='**뜻풀이**', value=dictionary.get(word).decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('``', '` `').replace('[', '`[').replace(']', ']`').strip())
     embed.set_footer(text=f"{interaction.user.display_name}님의 요청으로 게임이 재시작 되었습니다.")
-    start = await interaction.channel.send(embed=embed)
+    start = await interaction.followup.send(embed=embed, ephemeral=False)
     r.set(f'used:{server_id}:{word}', start.id)
 
 
