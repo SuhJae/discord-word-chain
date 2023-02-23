@@ -217,18 +217,20 @@ async def on_message(message):
     if n_bubem != next_word[-1]:
         name += f'({n_bubem})'
 
+    await message.delete()
 
     embed = nextcord.Embed(
-        title="",
+        title=name,
         description=f'{definition}',
-        color=nextcord.Color.green()
+        color=0x2B2D31
     )
 
-    if message.author.avatar != None:
-        embed.set_author(name=name, icon_url=message.author.avatar.url)
+    if message.author.avatar.url != None:
+        embed.set_author(name=message.author.display_name, icon_url=message.author.avatar.url)
     else:
-        embed.set_author(name=name, icon_url=client.user.avatar.url)
-    await message.reply(embed=embed, mention_author=False)
+        embed.set_author(name=message.author.display_name, icon_url=client.user.avatar.url)
+    msg = await message.channel.send(embed=embed)
+    r.set(used_key, msg.id)
 
     # check for game over
     keys = dictionary.keys(f'{next_word[-1]}*')
@@ -236,23 +238,47 @@ async def on_message(message):
 
     with r.pipeline() as pipe:
         for key in keys:
-            pipe.exists(f'used:{message.guild.id}:{key}')
+            pipe.exists(f'used:{key}')
         results = pipe.execute()
 
     unused_keys = [key for key, result in zip(keys, results) if not result]
 
     if len(unused_keys) == 0:
         await game_over(message, next_word)
+        await reset(message)
         return
     elif len(unused_keys) == 1 and len(keys[0]) == 1:
         await game_over(message, next_word)
+        await reset(message)
         return
+
+
+async def reset(message):
+    # clear used word keys
+    used_keys = r.keys(f'used:*')
+    for key in used_keys:
+        r.delete(key)
+
+    # set new word
+    r.delete(f'word')
+    while True:
+        word = dictionary.randomkey().decode('utf-8')
+        if len(f'*{dictionary.keys(word[-1])}') > 10:
+            break
+    r.set(f'word', word)
+
+    embed = nextcord.Embed(title="끝말잇기 시작!", description=f'끝말잇기를 다시 시작합니다! 첫 단어는 **{word}**입니다.',
+                           color=nextcord.Color.blue())
+    embed.add_field(name='**뜻풀이**', value=dictionary.get(word).decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('[', '`[').replace(']', ']`').strip().replace('``', '` `'))
+    embed.set_footer(text=f"{message.author.display_name}님의 이을 수 없는 단어로 게임이 재시작 되었습니다.")
+    start = await message.channel.send(embed=embed)
+    r.set(f'used:{word}', start.id)
 
 
 async def game_over(message, next_word):
     embed = nextcord.Embed(
         title="게임오버!",
-        description=f'{message.author.display_name}님이 사용하신 **{next_word}**에 이을 단어가 더 없습니다!\n게임을 다시 시작하려면 `/재시작`을 입력해 주세요.',
+        description=f'{message.author.display_name}님이 사용하신 **{next_word}**에 이을 단어가 더 없습니다!\n게임이 다시 시작됩니다!',
         color=nextcord.Color.red()
     )
     combo = len(r.keys(f'used:{message.guild.id}:*'))
