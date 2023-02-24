@@ -272,7 +272,7 @@ async def reset(message):
     embed.add_field(name='**뜻풀이**', value=dictionary.get(word).decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('[', '`[').replace(']', ']`').strip().replace('``', '` `'))
     embed.set_footer(text=f"{message.author.display_name}님의 이을 수 없는 단어로 게임이 재시작 되었습니다.")
     start = await message.channel.send(embed=embed)
-    r.set(f'word:{message.guild.id}', start.id)
+    r.set(f'used:{message.guild.id}', start.id)
 
 
 async def game_over(message, next_word):
