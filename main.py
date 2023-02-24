@@ -255,17 +255,17 @@ async def on_message(message):
 
 async def reset(message):
     # clear used word keys
-    used_keys = r.keys(f'used:*')
+    used_keys = r.keys(f'used:{message.guild.id}:*')
     for key in used_keys:
         r.delete(key)
 
     # set new word
-    r.delete(f'word')
+    r.delete(f'word:{message.guild.id}')
     while True:
         word = dictionary.randomkey().decode('utf-8')
         if len(f'*{dictionary.keys(word[-1])}') > 10:
             break
-    r.set(f'word', word)
+    r.set(f'word:{message.guild.id}', word)
 
     embed = nextcord.Embed(title="끝말잇기 시작!", description=f'끝말잇기를 다시 시작합니다! 첫 단어는 **{word}**입니다.',
                            color=nextcord.Color.blue())
