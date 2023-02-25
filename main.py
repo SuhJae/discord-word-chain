@@ -1,6 +1,7 @@
 import nextcord
 import redis
 import hgtk
+import asyncio
 from hgtk.exception import NotHangulException
 from nextcord import Interaction, SlashOption
 from nextcord.ext import commands
@@ -79,7 +80,7 @@ async def search_words(
         url = ('https://db.history.go.kr/search/searchResult.do?sort=levelId&dir=ASC&start=-1&limit=20&page=1&pre_page=1&itemIds=&codeIds=&synonym=off&chinessChar=on&searchTermImages='+ word +'&searchKeywordType=BI&searchKeywordMethod=EQ&searchKeyword=가&searchKeywordConjunction=AND').replace(' ', '%20')
     else:
         url = ('https://stdict.korean.go.kr/search/searchResult.do?pageSize=10&searchKeyword='+word).replace(' ', '%20')
-    description = definition.decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('``', '` `').replace('[', '`[').replace(']', ']`').strip()
+    description = definition.decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('[', '`[').replace(']', ']`').strip().replace('``', '` `')
 
     # sends the autocompleted result
     embed = nextcord.Embed(title="",
@@ -140,7 +141,7 @@ async def set_channel(
     r.set(f'word:{interaction.guild.id}', word)
 
     embed = nextcord.Embed(title="끝말잇기 시작!", description=f'끝말잇기를 시작합니다! 첫 단어는 **`{word}`**입니다.', color=nextcord.Color.blue())
-    embed.add_field(name='**뜻풀이**', value=dictionary.get(word).decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('``', '` `').replace('[', '`[').replace(']', ']`').strip())
+    embed.add_field(name='**뜻풀이**', value=dictionary.get(word).decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('[', '`[').replace(']', ']`').strip().replace('``', '` `'))
     await interaction.channel.send(embed=embed)
 
 
@@ -156,6 +157,48 @@ async def send_error_message(channel, error_description):
 
 @client.event
 async def on_message(message):
+    if message.author.id == 814053998201274388 and message.content == '!공지':
+        msg = await message.reply(f'{len(client.guilds)}개의 서버에 공지를 전송을 시작할까요? 만일 그렇다면 10 초 안에 `!확인`를 한 번 더 입력해 주세요.', mention_author=False)
+        try:
+            confirmation = await client.wait_for('message', check=lambda m: m.author.id == 814053998201274388 and m.content == '!확인', timeout=10)
+            if confirmation:
+                await msg.channel.send(content='30 초 안에 공지할 내용을 입력해 주세요.')
+                try:
+                    msg = await client.wait_for('message', check=lambda m: m.author.id == 814053998201274388, timeout=30)
+                    notice = msg.content
+
+                    embed = nextcord.Embed(title="공지", description=notice, color=nextcord.Color.purple())
+                    embed.set_footer(text='이 메세지는 끝말잇기 봇 개발자로부터 전송되었습니다.')
+
+                    msg = await msg.channel.send(content='공지를 전송합니다...')
+
+                    # Key: channel:<guild id>
+                    # Vale: channel id
+
+                    channels = r.keys('channel:*')
+                    for channel_key in channels:
+                        guild_id = int(channel_key.decode('utf-8').split(':')[1])
+
+                        try:
+                            guild = client.get_guild(guild_id)
+                            channel_id = int(r.get(channel_key))
+                            channel = guild.get_channel(channel_id)
+                        except:
+                            logger.log(f'Failed to get channel from {guild_id} guild.')
+                        try:
+                            await channel.send(embed=embed)
+                            logger.log(f'Sent notice to {guild_id} guild.')
+                        except:
+                            logger.log(f'Failed to send notice to {guild_id} guild.')
+
+                    await msg.channel.send(content=f'{len(client.guilds)}개의 서버에 공지를 전송했습니다.')
+                except asyncio.TimeoutError:
+                    await msg.channel.send(content='시간이 초과되어 취소되었습니다.')
+                    return
+        except asyncio.TimeoutError:
+            await msg.edit(content='시간이 초과되어 취소되었습니다.')
+            return
+
     if message.author.bot or not r.get(f'channel:{message.guild.id}'):
         return
 
@@ -205,8 +248,8 @@ async def on_message(message):
         return
     r.set(used_key, message.id)
 
-    definition = is_valid_word.decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('``', '` `').replace(
-        '[', '`[').replace(']', ']`').strip()
+    definition = is_valid_word.decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace(
+        '[', '`[').replace(']', ']`').strip().replace('``', '` `')
     r.set(f'word:{message.guild.id}', next_word)
 
     if not is_dubem:
@@ -310,7 +353,7 @@ async def restart_game(interaction: Interaction):
 
     embed = nextcord.Embed(title="끝말잇기 시작!", description=f'끝말잇기를 다시 시작합니다! 첫 단어는 **{word}**입니다.',
                            color=nextcord.Color.blue())
-    embed.add_field(name='**뜻풀이**', value=dictionary.get(word).decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('``', '` `').replace('[', '`[').replace(']', ']`').strip())
+    embed.add_field(name='**뜻풀이**', value=dictionary.get(word).decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('[', '`[').replace(']', ']`').strip().replace('``', '` `'))
     embed.set_footer(text=f"{interaction.user.display_name}님의 요청으로 게임이 재시작 되었습니다.")
     start = await interaction.followup.send(embed=embed, ephemeral=False)
     r.set(f'used:{server_id}:{word}', start.id)
