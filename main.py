@@ -1,19 +1,23 @@
+import asyncio
+
+import hgtk
 import nextcord
 import redis
-import hgtk
-import asyncio
 from hgtk.exception import NotHangulException
 from nextcord import Interaction, SlashOption
 from nextcord.ext import commands
+
+from formatting import SimpleEmbed
 from utility import Logger, ConfigReader
 
-logger = Logger()
-config = ConfigReader()
+logger, config, SE = Logger(), ConfigReader(), SimpleEmbed()
+r = redis.Redis(host=config.get_value('REDIS', 'host'), port=config.get_value('REDIS', 'port'),
+                db=config.get_value('REDIS', 'db'))
+dictionary = redis.Redis(host=config.get_value('DICTIONARY', 'host'), port=config.get_value('DICTIONARY', 'port'),
+                         db=config.get_value('DICTIONARY', 'db'))
 
-r = redis.Redis(host=config.get_value('REDIS', 'host'), port=config.get_value('REDIS', 'port'), db=config.get_value('REDIS', 'db'))
-dictionary = redis.Redis(host=config.get_value('DICTIONARY', 'host'), port=config.get_value('DICTIONARY', 'port'), db=config.get_value('DICTIONARY', 'db'))
-
-logger.log(f"Connected to Redis {config.get_value('REDIS', 'host') + ':' + config.get_value('REDIS', 'port') + '/' + config.get_value('REDIS', 'db')}")
+logger.log(
+    f"Connected to Redis {config.get_value('REDIS', 'host') + ':' + config.get_value('REDIS', 'port') + '/' + config.get_value('REDIS', 'db')}")
 logger.log('Starting bot...')
 
 intents = nextcord.Intents.default()
@@ -54,13 +58,13 @@ async def on_ready():
     logger.log(f'Logged in as {client.user}')
 
 
-@client.slash_command(name = '사전', description = '끝말잇기에서 사용할 수 있는 단어를 검색합니다.')
+@client.slash_command(name='사전', description='끝말잇기에서 사용할 수 있는 단어를 검색합니다.')
 async def search_words(
-    interaction: Interaction,
-    word: str = SlashOption(
-        name="단어",
-        description="검색할 단어를 입력해 주세요.",
-    ),
+        interaction: Interaction,
+        word: str = SlashOption(
+            name="단어",
+            description="검색할 단어를 입력해 주세요.",
+        ),
 ):
     logger.log(f'{interaction.user.name} used /단어검색 command on {interaction.guild.name} server.')
 
@@ -71,20 +75,22 @@ async def search_words(
 
     definition = dictionary.get(word)
     if not definition:
-        await interaction.response.send_message(f'"**{word}**" 단어를 찾을 수 없었습니다. 철자를 다시 확인해 주세요. ', ephemeral=True)
+        await interaction.response.send_message(embed=SE.error(f'"**{word}**" 단어를 찾을 수 없었습니다. 철자를 다시 확인해 주세요.'), ephemeral=True)
         return
 
     if definition.decode('utf-8').startswith('「어인정」'):
-        url = ('https://kkukowiki.kr/w/'+word).replace(' ', '%20')
+        url = ('https://kkukowiki.kr/w/' + word).replace(' ', '%20')
     elif definition.decode('utf-8').startswith('「역사 용어」'):
-        url = ('https://db.history.go.kr/search/searchResult.do?sort=levelId&dir=ASC&start=-1&limit=20&page=1&pre_page=1&itemIds=&codeIds=&synonym=off&chinessChar=on&searchTermImages='+ word +'&searchKeywordType=BI&searchKeywordMethod=EQ&searchKeyword=가&searchKeywordConjunction=AND').replace(' ', '%20')
+        url = (
+                    'https://db.history.go.kr/search/searchResult.do?sort=levelId&dir=ASC&start=-1&limit=20&page=1&pre_page=1&itemIds=&codeIds=&synonym=off&chinessChar=on&searchTermImages=' + word + '&searchKeywordType=BI&searchKeywordMethod=EQ&searchKeyword=가&searchKeywordConjunction=AND').replace(
+            ' ', '%20')
     else:
-        url = ('https://stdict.korean.go.kr/search/searchResult.do?pageSize=10&searchKeyword='+word).replace(' ', '%20')
+        url = ('https://stdict.korean.go.kr/search/searchResult.do?pageSize=10&searchKeyword=' + word).replace(' ','%20')
     description = definition.decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('[', '`[').replace(']', ']`').strip().replace('``', '` `')
 
     # sends the autocompleted result
     embed = nextcord.Embed(title="",
-    description=f'{description}\n\n__[사전에서 보기]({url})__',
+                           description=f'{description}\n\n__[사전에서 보기]({url})__',
                            color=nextcord.Color.green())
     embed.set_author(name=f"단어 검색 - {word}", icon_url=client.user.avatar.url)
 
@@ -113,19 +119,19 @@ async def preview(interaction: Interaction, word: str):
 
 @client.slash_command(name='설정', description='현재 명령어를 사용한 채널을 끝말잇기 채널로 설정합니다.', default_member_permissions=8)
 async def set_channel(
-    interaction: Interaction,
+        interaction: Interaction,
 ):
     # check if bot has permission to send messages and edit messages on the channel
     if not interaction.channel.permissions_for(interaction.guild.me).send_messages:
-        await interaction.response.send_message("끝말잇기 채널로 설정할 수 없습니다. 봇이 메시지를 보낼 권한이 없습니다.", ephemeral=True)
+        await interaction.response.send_message(embed=SE.error("끝말잇기 채널로 설정할 수 없습니다. 봇이 메시지를 보낼 권한이 없습니다."), ephemeral=True)
         return
     if not interaction.channel.permissions_for(interaction.guild.me).manage_messages:
-        await interaction.response.send_message("끝말잇기 채널로 설정할 수 없습니다. 봇이 메시지를 수정할 권한이 없습니다.", ephemeral=True)
+        await interaction.response.send_message(embed=SE.error("끝말잇기 채널로 설정할 수 없습니다. 봇이 메시지를 수정할 권한이 없습니다."), ephemeral=True)
         return
     if r.get(f'channel:{interaction.guild.id}'):
-        await interaction.response.send_message(f"끝말잇기 채널이 <#{int(r.get('channel:' + str(interaction.guild.id)))}>에서 현재 채널로 변경 되었습니다.", ephemeral=True)
+        await interaction.response.send_message(embed=SE.success(f"끝말잇기 채널이 <#{int(r.get('channel:' + str(interaction.guild.id)))}>에서 현재 채널로 변경 되었습니다."), ephemeral=True)
     else:
-        await interaction.response.send_message(f'끝말잇기 채널이 {interaction.channel.mention}로 설정되었습니다.', ephemeral=True)
+        await interaction.response.send_message(embed=SE.success(f'끝말잇기 채널이 {interaction.channel.mention}로 설정되었습니다.'), ephemeral=True)
 
     logger.log(f'{interaction.user.name} used /설정 command on {interaction.guild.name} server.')
     r.set(f'channel:{interaction.guild.id}', interaction.channel.id)
@@ -140,8 +146,10 @@ async def set_channel(
 
     r.set(f'word:{interaction.guild.id}', word)
 
-    embed = nextcord.Embed(title="끝말잇기 시작!", description=f'끝말잇기를 시작합니다! 첫 단어는 **`{word}`**입니다.', color=nextcord.Color.blue())
-    embed.add_field(name='**뜻풀이**', value=dictionary.get(word).decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('[', '`[').replace(']', ']`').strip().replace('``', '` `'))
+    embed = nextcord.Embed(title="끝말잇기 시작!", description=f'끝말잇기를 시작합니다! 첫 단어는 **`{word}`**입니다.',
+                           color=nextcord.Color.blue())
+    embed.add_field(name='**뜻풀이**',
+                    value=dictionary.get(word).decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('[', '`[').replace(']', ']`').strip().replace('``', '` `'))
     await interaction.channel.send(embed=embed)
 
 
@@ -158,13 +166,16 @@ async def send_error_message(channel, error_description):
 @client.event
 async def on_message(message):
     if message.author.id == 814053998201274388 and message.content == '!공지':
-        msg = await message.reply(f'{len(client.guilds)}개의 서버에 공지를 전송을 시작할까요? 만일 그렇다면 10 초 안에 `!확인`를 한 번 더 입력해 주세요.', mention_author=False)
+        msg = await message.reply(f'{len(client.guilds)}개의 서버에 공지를 전송을 시작할까요? 만일 그렇다면 10 초 안에 `!확인`를 한 번 더 입력해 주세요.',
+                                  mention_author=False)
         try:
-            confirmation = await client.wait_for('message', check=lambda m: m.author.id == 814053998201274388 and m.content == '!확인', timeout=10)
+            confirmation = await client.wait_for('message', check=lambda
+                m: m.author.id == 814053998201274388 and m.content == '!확인', timeout=10)
             if confirmation:
                 await msg.channel.send(content='30 초 안에 공지할 내용을 입력해 주세요.')
                 try:
-                    msg = await client.wait_for('message', check=lambda m: m.author.id == 814053998201274388, timeout=30)
+                    msg = await client.wait_for('message', check=lambda m: m.author.id == 814053998201274388,
+                                                timeout=30)
                     notice = msg.content
 
                     embed = nextcord.Embed(title="공지", description=notice, color=nextcord.Color.purple())
@@ -241,15 +252,15 @@ async def on_message(message):
         used_message_id = r.get(used_key)
         if used_message_id:
             used_message = await message.channel.fetch_message(int(used_message_id))
-            await send_error_message(message.channel, f'**{next_word}**는 __[여기서]({used_message.jump_url})__ 이미 사용된 단어입니다.')
+            await send_error_message(message.channel,
+                                     f'**{next_word}**는 __[여기서]({used_message.jump_url})__ 이미 사용된 단어입니다.')
         else:
             await send_error_message(message.channel, f'**{next_word}**는 이미 사용된 단어입니다.')
         await message.delete()
         return
     r.set(used_key, message.id)
 
-    definition = is_valid_word.decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace(
-        '[', '`[').replace(']', ']`').strip().replace('``', '` `')
+    definition = is_valid_word.decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('[', '`[').replace(']', ']`').strip().replace('``', '` `')
     r.set(f'word:{message.guild.id}', next_word)
 
     if not is_dubem:
@@ -312,7 +323,8 @@ async def reset(message):
 
     embed = nextcord.Embed(title="끝말잇기 시작!", description=f'끝말잇기를 다시 시작합니다! 첫 단어는 **{word}**입니다.',
                            color=nextcord.Color.blue())
-    embed.add_field(name='**뜻풀이**', value=dictionary.get(word).decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('[', '`[').replace(']', ']`').strip().replace('``', '` `'))
+    embed.add_field(name='**뜻풀이**',
+                    value=dictionary.get(word).decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('[', '`[').replace(']', ']`').strip().replace('``', '` `'))
     embed.set_footer(text=f"{message.author.display_name}님의 이을 수 없는 단어로 게임이 재시작 되었습니다.")
     start = await message.channel.send(embed=embed)
     r.set(f'used:{message.guild.id}', start.id)
@@ -353,7 +365,8 @@ async def restart_game(interaction: Interaction):
 
     embed = nextcord.Embed(title="끝말잇기 시작!", description=f'끝말잇기를 다시 시작합니다! 첫 단어는 **{word}**입니다.',
                            color=nextcord.Color.blue())
-    embed.add_field(name='**뜻풀이**', value=dictionary.get(word).decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('[', '`[').replace(']', ']`').strip().replace('``', '` `'))
+    embed.add_field(name='**뜻풀이**',
+                    value=dictionary.get(word).decode('utf-8').replace('\\n', '\n').replace('「', '`「').replace('」', '」`').replace('[', '`[').replace(']', ']`').strip().replace('``', '` `'))
     embed.set_footer(text=f"{interaction.user.display_name}님의 요청으로 게임이 재시작 되었습니다.")
     start = await interaction.followup.send(embed=embed, ephemeral=False)
     r.set(f'used:{server_id}:{word}', start.id)
@@ -371,7 +384,7 @@ async def get_combo(interaction: Interaction):
 
     channel = r.get(f'channel:{server_id}')
     if channel == None:
-        await interaction.response.send_message('아직 서버에 채널이 설정되지 않았습니다.', ephemeral=True)
+        await interaction.response.send_message(embed=SE.error('아직 서버에 채널이 설정되지 않았습니다.'), ephemeral=True)
     else:
         channel = int(channel)
         if interaction.channel.id == channel:
